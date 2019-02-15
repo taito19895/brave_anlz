@@ -9,26 +9,30 @@ import fileinput
 #from https://qiita.com/wyamamo/items/38789488bc008e9223e6
 ##################################################################
 
-#  +------------------------------------------------  [15] D[2]
-#  |  +---------------------------------------------  [14] D[1]
-#  |  |  +------------------------------------------  [13] D[0]
-#  |  |  |  +---------------------------------------  [12] FSYNC (0:chB SYNC, 1:chB ASYNC)
-#  |  |  |  |  +------------------------------------  [11] UWERR(1:error, 0:no error)  
-#  |  |  |  |  |  +---------------------------------  [10] UWINFO[1]                   
-#  |  |  |  |  |  |  +------------------------------  [9] UWINFO[0]                   
-#  |  |  |  |  |  |  |  +---------------------------  [8] DIV (0:A, 1:B)
-#  |  |  |  |  |  |  |  |  +------------------------  [7] DA[2]
-#  |  |  |  |  |  |  |  |  |  +---------------------  [6] DA[1]
-#  |  |  |  |  |  |  |  |  |  |  +------------------  [5] DA[0]
-#  |  |  |  |  |  |  |  |  |  |  |  +---------------  [4] FSYNCA (0:chA SYNC, 1:chA ASYNC)
-#  |  |  |  |  |  |  |  |  |  |  |  |  +------------  [3] DB[2]
-#  |  |  |  |  |  |  |  |  |  |  |  |  |  +---------  [2] DB[1]
-#  |  |  |  |  |  |  |  |  |  |  |  |  |  |  +------  [1] DB[0]
-#  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  +---  [0] FSYNCB (0:chB SYNC, 1:chB ASYNC)
-#  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-#+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-#|15:14:13:12|11:10: 9: 8| 7: 6: 5: 4| 3: 2: 1: 0|  <<== Bit Position
-#+--+--+--+--+--+--+--+--+--+--+--+--+--+--:--:--+
+#      FPGA からの I2S ch1  受信 format
+#       +-----------------------------------------------  [15] 選択系 D[2]
+#       |  +--------------------------------------------  [14] 選択系 D[1] 
+#       |  |  +-----------------------------------------  [13] 選択系 D[0] 
+#       |  |  |  +--------------------------------------  [12] 選択系 FSYNC 選択系が(0:SYNC, 1:ASYNC)
+#       |  |  |  |                                                                                       
+#       |  |  |  |  +-----------------------------------  [11] 選択系 UWERR(1:error, 0:no error)  
+#       |  |  |  |  |  +--------------------------------  [10] 選択系 UWINFO[1] 1:D[1:0]=UW
+#       |  |  |  |  |  |  +-----------------------------  [9]  選択系 UWINFO[0] 1:D[2:1]=UW
+#       |  |  |  |  |  |  |  +--------------------------  [8]  DIV (0:A, 1:B)
+#       |  |  |  |  |  |  |  |                                                                           
+#       |  |  |  |  |  |  |  |  +-----------------------  [7] 選択系 D[2]
+#       |  |  |  |  |  |  |  |  |  +--------------------  [6] 選択系 D[1]  
+#       |  |  |  |  |  |  |  |  |  |  +-----------------  [5] 選択系 D[0] 
+#       |  |  |  |  |  |  |  |  |  |  |  +--------------  [4] 選択系 FSYNC 非選択系が(0:SYNC, 1:ASYNC)
+#       |  |  |  |  |  |  |  |  |  |  |  |                
+#       |  |  |  |  |  |  |  |  |  |  |  |  +-----------  [3] RESERVED
+#       |  |  |  |  |  |  |  |  |  |  |  |  |  +--------  [2] RESERVED
+#       |  |  |  |  |  |  |  |  |  |  |  |  |  |  +-----  [1] RESERVED
+#       |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  +--  [0] 使用不可
+#       |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+#      +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+#      |15:14:13:12|11:10: 9: 8| 7: 6: 5: 4| 3: 2: 1: 0|  <<== Bit Position
+#      +--+--+--+--+--+--+--+--+--+--+--+--+--+--:--:--+ */
 
 
 parser = argparse.ArgumentParser(prog="brave_anlz.py", description="cat with file infomation, TI style")
@@ -42,7 +46,8 @@ args = parser.parse_args()
 Infile1=open(args.infile1)      #正解データファイル
 Infile2=open(args.infile2)      #観測データファイル
 
-print('ref\t\tObs\t\tans\tchA\tchB\tA/B\tsyE\tsyAE\tsyBE\tuwE\tuwA\tuwB\tUW')
+print('   \t\t   \t\t   \tsel\tunsl    sel\tunsl sel sel unsl')
+print('ref\t\tObs\t\tans\tdat\tdat\tA/B\tsyE\tsyE uwE  UW  uw')
 print('-----------------------------------------------------------------------------------')
 uw1 = 0
 uw2 = 0
@@ -90,60 +95,47 @@ for l1,l2 in zip(Infile1,Infile2):  #1と2の要素数が異なる場合 zip で
         #        '=>  0x'+format((s_hnum), '04x')+'\n', 
         #        end="")
 
-        #inum=inum2  #default
-        inum=inum1  #for debug
-
-        if( (inum1 & 0x0400) ):      #UWINFO[1]
-            uw1 =  ((inum1>>11 )&  0x000C)
+        inum=inum2  #default
+        #inum=inum1  #for debug
+        unsel_uw =0
+        if( (inum & 0x0400) ):      #UWINFO[1]
+            uw1 =  ((inum2>>11 )&  0x000C)
             uw2 = 0
-            uwa1 =  ((inum1>>3 )&  0x000C)
-            uwa2 = 0
-            uwb1 =  ((inum1<<1 )&  0x000C)
-            uwb2 = 0
+            unsel_uw1 =  ((inum2>>3 )&  0x000C)
+            unsel_uw2 =   0
         elif( (inum & 0x0200) ):    #UWINFO[0]
             uw2 =  ((inum>>14 )&  0x0003)
             uw = (uw1|uw2)
-            uwa2 =  ((inum>>6 )&  0x0003)
-            uwa = (uwa1|uwa2)
-            uwb2 =  ((inum>>2 )&  0x0003)
-            uwb = (uwb1|uwb2)
+            unsel_uw2 =  ((inum>>6 )&  0x0003)
+            unsel_uw = (unsel_uw1|unsel_uw2)
 
         Ans=  ((inum1 >>13) & 0x0007)  
-        chA=  ((inum2 >>5 ) & 0x0007)  
-        chB=  ((inum2 >>1 ) & 0x0007)  
+        sel_dat=  ((inum2 >>13 ) & 0x0007)  
+        unsel_dat=  ((inum2 >>5 ) & 0x0007)  
+        #chB=  ((inum2 >>1 ) & 0x0007)  
         a_b=  ((inum2 >>8 ) & 0x0001) + 0xA 
-        sync= ((inum2 >>12) & 0x0001) 
-        uwer= ((inum2 >>11) & 0x0001)
-        syerA =((inum2 >> 4) & 0x0001)
-        syerB =((inum2 >> 0) & 0x0001)
+        sel_sync= ((inum2 >>12) & 0x0001) 
+        sel_uwer= ((inum2 >>11) & 0x0001)
+        unsel_sync =((inum2 >> 4) & 0x0001)
 
 
-        if (a_b == 0xA):        #A系統選択
-            if (Ans != chA):
-                err+=1
-                Ans =  format(Ans, '01x')+'!\t'
-            else:
-                Ans =  format(Ans, '01x')+'\t'
-        else:                   #B系統選択
-            if (Ans != chB):
-                err+=1
-                Ans =  format(Ans, '01x')+'!\t'
-            else:
-                Ans =  format(Ans, '01x')+'\t'
+        if (Ans != sel_dat):
+            err+=1
+            Ans =  format(Ans, '01x')+'!\t'
+        else:
+            Ans =  format(Ans, '01x')+'\t'
 
         print('0x'+format(inum1, '04x')+'\t',       #正解生データ 
                 '0x'+format(inum2, '04x')+'\t',     #観測生データ
                 Ans ,           #正解の3bit
-                format(chA, '01x')+'\t' ,           #chA 3bit
-                format(chB, '01x')+'\t' ,           #chB 3bit
+                format(sel_dat, '01x')+'\t' ,       #選択系data 3bit
+                format(unsel_dat, '01x')+'\t' ,     #非選択系data 3bit
                 format(a_b, '01X')+'\t' ,           #
-                format(sync, '01x')+'\t',           #
-                format(syerA, '01x')+'\t',           #
-                format(syerB, '01x')+'\t',           #
-                format(uwer, '01x')+'\t',           #
-                format(uwa, '01x')+'\t' ,           #
-                format(uwb, '01x')+'\t' ,           #
-                format(uw, '01x')+'\n' ,            #
+                format(sel_sync, '01x')+'\t',       #選択系 同期/非同期
+                format(unsel_sync, '01x')+'\t',     #非選択系 同期/非同期
+                format(sel_uwer, '01x')+'\t',       #選択系 UW error
+                format(uw, '01x')+'\t' ,            #選択系 UW
+                format(unsel_uw, '01x')+'\n' ,      #非選択系 UW
                 end="")
 
 errate = 100*err/4096
