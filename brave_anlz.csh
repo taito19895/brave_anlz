@@ -1,8 +1,5 @@
 #!/bin/csh -f
 
-
-
-
 set a=`getopt u:l: $*`
 set c=`getopt u:l: $*`
 
@@ -37,19 +34,3 @@ foreach file ($c)
 #	../../brave/obs_data/fpga_24/id0/$file
 
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
