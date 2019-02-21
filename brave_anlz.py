@@ -62,6 +62,10 @@ err = 0
 sync = 0
 syerA = 0
 syerB = 0
+uw_info = 0
+i = 0
+Ans = 0
+
 for l1,l2 in zip(Infile1,Infile2):  #1と2の要素数が異なる場合 zip では多い分は無視 -> itertools.zip_longest
 
     if(args.info):      # -i
@@ -109,8 +113,7 @@ for l1,l2 in zip(Infile1,Infile2):  #1と2の要素数が異なる場合 zip で
             unsel_uw2 =  ((inum>>6 )&  0x0003)
             unsel_uw = (unsel_uw1|unsel_uw2)
 
-        Ans=  ((inum1 >>13) & 0x0007)  
-        sel_dat=  ((inum2 >>13 ) & 0x0007)  
+        sel_dat=  ((inum2 >>13 ) & 0x0007)
         unsel_dat=  ((inum2 >>5 ) & 0x0007)  
         #chB=  ((inum2 >>1 ) & 0x0007)  
         a_b=  ((inum2 >>8 ) & 0x0001) + 0xA 
@@ -118,12 +121,18 @@ for l1,l2 in zip(Infile1,Infile2):  #1と2の要素数が異なる場合 zip で
         sel_uwer= ((inum2 >>11) & 0x0001)
         unsel_sync =((inum2 >> 4) & 0x0001)
 
-
-        if (Ans != sel_dat):
-            err+=1
-            Ans =  format(Ans, '01x')+'!\t'
+        uw_info = inum2  & 0x0400
+        if (uw_info==0x0400):
+            i=1
         else:
-            Ans =  format(Ans, '01x')+'\t'
+            i=i+1
+            i &= 7
+
+        if (i != sel_dat):
+            err+=1
+            Ans =  format(i, '01x')+'!\t'
+        else:
+            Ans =  format(i, '01x')+'\t'
 
         print('0x'+format(inum1, '04x')+'\t',       #正解生データ 
                 '0x'+format(inum2, '04x')+'\t',     #観測生データ
