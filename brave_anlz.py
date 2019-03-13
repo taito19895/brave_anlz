@@ -79,8 +79,7 @@ args = parser.parse_args()
 Infile1=open(args.infile1)      #正解データファイル
 Infile2=open(args.infile2)      #観測データファイル
 
-print('   \t\t   \t\t   \tsel\tunsl    sel\tunsl sel sel unsl')
-print('ref\t\tObs\t\tans\tdat\tdat\tA/B\tsyE\tsyE uwE  UW  uw')
+print('ref\tok/NG\tObs\tans\tobs \tA/B \tsyE \tuwE \tUW')
 print('-----------------------------------------------------------------------------------')
 uw1 = 0
 uw2 = 0
@@ -119,8 +118,8 @@ for l1,l2 in zip(Infile1,Infile2):  #1と2の要素数が異なる場合 zip で
         else:
             inum1 = int(line1, 10)  #正解参照 data
             inum2 = int(line2, 10)  #観測 data
-        s_hnum1 = inum1 ^ 0xAAAA
-        s_hnum2 = inum2 ^ 0xAAAA
+#        s_hnum1 = inum1 ^ 0xAAAA
+#        s_hnum2 = inum2 ^ 0xAAAA
         #print(hex(s_hnum)+'\t'+'\n', end="")
         #print(hex(s_hnum)+'\t'+'a'+'\n', end="")
         #print(hex(s_hnum)+'\t',hex(f_inum)+'\n', end="")
@@ -134,19 +133,15 @@ for l1,l2 in zip(Infile1,Infile2):  #1と2の要素数が異なる場合 zip で
 
         inum=inum2  #default
         #inum=inum1  #for debug
-        unsel_uw =0
         if( (inum & I2S1_RX_UW1_MASK ) ):      #UWINFO[1]
             uw =  ((inum2>>12 )&  0x000F)
-            unsel_uw =  ((inum2>>4 )&  0x000F)
 
         ref_dat=  ((inum1 >>12 ) & 0x000F)
         sel_dat=  ((inum2 >>12 ) & 0x000F)
-        unsel_dat=  ((inum2 >>4 ) & 0x000F)
         #chB=  ((inum2 >>1 ) & 0x0007)  
         a_b=  ((inum2 >>8 ) & 0x0001) + 0xA 
         sel_sync= ((inum2 >>11) & 0x0001)
         sel_uwer= ((inum2 >>10) & 0x0001)
-        unsel_sync =((inum2 >> 3) & 0x0001)
 
         uw_info = inum2  & I2S1_RX_UW1_MASK
         if (uw_info!=0):
@@ -158,21 +153,21 @@ for l1,l2 in zip(Infile1,Infile2):  #1と2の要素数が異なる場合 zip で
         if (ref_dat != sel_dat):
             err+=1
             Ans =  format(i, '01x')+'!\t'
+            correct=1
         else:
             Ans =  format(i, '01x')+'\t'
+            correct=0
 
         print('0x'+format(inum1, '04x')+'\t',       #正解生データ 
+                format(correct, '01x')+'\t' ,       #正解 or 不正解
                 '0x'+format(inum2, '04x')+'\t',     #観測生データ
-                Ans ,           #正解の3bit
 
-                format(sel_dat, '01x')+'\t' ,       #選択系data 3bit
-                format(unsel_dat, '01x')+'\t' ,     #非選択系data 3bit
+                format(ref_dat, '01x')+'\t' ,       #選択系data 4bit
+                format(sel_dat, '01x')+'\t' ,       #選択系data 4bit
                 format(a_b, '01X')+'\t' ,           #
                 format(sel_sync, '01x')+'\t',       #選択系 同期/非同期
-                format(unsel_sync, '01x')+'\t',     #非選択系 同期/非同期
                 format(sel_uwer, '01x')+'\t',       #選択系 UW error
-                format(uw, '01x')+'\t' ,            #選択系 UW
-                format(unsel_uw, '01x')+'\n' ,      #非選択系 UW
+                format(uw, '01x')+'\n',             #選択系 UW
                 end="")
 
 errate = 100*err/4096
