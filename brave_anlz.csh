@@ -30,7 +30,7 @@ foreach file ($c)
 	echo ""
 
 	./brave_anlz.py -hex \
-	../../brave/obs_data/fpga_24/id0/ok.dat $file
+	../../brave/obs_data/ref.dat $file
 #	../../brave/obs_data/fpga_24/id0/$file
 
 end
